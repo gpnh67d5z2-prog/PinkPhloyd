@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Player - Debug Console</title>
+    <style>
+        body {
+            background: #191414;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .debug-section {
+            background: #282828;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #1DB954;
+        }
+        button {
+            background: #1DB954;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #1ed760;
+        }
+        pre {
+            background: #121212;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .error {
+            color: #ff4444;
+        }
+        .success {
+            color: #44ff44;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Music Player - Debug Console</h1>
+    
+    <div class="debug-section">
+        <h2>📊 Статус API</h2>
+        <button onclick="checkAPIs()">Проверить API</button>
+        <button onclick="checkSpotify()">Проверить Spotify</button>
+        <button onclick="checkiTunes()">Проверить iTunes</button>
+        <pre id="apiStatus"></pre>
+    </div>
+
+    <div class="debug-section">
+        <h2>🔍 Тест поиска</h2>
+        <input type="text" id="searchQuery" placeholder="Введите название песни" value="Taylor Swift">
+        <button onclick="testSearch()">Поиск Spotify</button>
+        <button onclick="testLocalSearch()">Локальный поиск</button>
+        <button onclick="testiTunesSearch()">Поиск iTunes</button>
+        <pre id="searchResults"></pre>
+    </div>
+
+    <div class="debug-section">
+        <h2>📚 Тест альбомов</h2>
+        <input type="text" id="albumQuery" placeholder="Введите название альбома" value="Lover">
+        <button onclick="testAlbumSearch()">Поиск альбомов</button>
+        <button onclick="testAlbumDetails()">Детали альбома</button>
+        <pre id="albumResults"></pre>
+    </div>
+
+    <div class="debug-section">
+        <h2>📝 Логи консоли</h2>
+        <button onclick="clearLogs()">Очистить логи</button>
+        <button onclick="location.href='index.html'">Вернуться в плеер</button>
+        <pre id="consoleLogs" style="max-height: 400px; overflow-y: auto;"></pre>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        // Перенаправляем логи
+        const logsContainer = document.getElementById('consoleLogs');
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        console.log = function(...args) {
+            originalLog(...args);
+            const text = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ');
+            logsContainer.textContent += text + '\n';
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        };
+
+        console.error = function(...args) {
+            originalError(...args);
+            const text = '<span class="error">' + args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ') + '</span>';
+            logsContainer.innerHTML += text + '\n';
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        };
+
+        async function checkAPIs() {
+            const status = document.getElementById('apiStatus');
+            status.innerHTML = 'Проверка API...\n';
+
+            try {
+                // Проверяем Spotify
+                const spotifyTest = await spotifyFetchWebApi('v1/me', 'GET');
+                status.innerHTML += '<span class="' + (spotifyTest ? 'success' : 'error') + '">Spotify: ' + (spotifyTest ? '✓ OK' : '✗ Ошибка') + '</span>\n';
+            } catch (e) {
+                status.innerHTML += '<span class="error">Spotify: ✗ ' + e.message + '</span>\n';
+            }
+
+            try {
+                // Проверяем iTunes
+                const itunesTest = await fetch('https://itunes.apple.com/search?term=test&limit=1');
+                status.innerHTML += '<span class="' + (itunesTest.ok ? 'success' : 'error') + '">iTunes: ' + (itunesTest.ok ? '✓ OK' : '✗ Ошибка') + '</span>\n';
+            } catch (e) {
+                status.innerHTML += '<span class="error">iTunes: ✗ ' + e.message + '</span>\n';
+            }
+
+            status.innerHTML += '\nТокен Spotify: ' + (API_CONFIG.SPOTIFY_TOKEN ? '✓ Установлен' : '✗ Не установлен') + '\n';
+        }
+
+        async function checkSpotify() {
+            const status = document.getElementById('apiStatus');
+            status.innerHTML = 'Проверка Spotify...\n';
+
+            try {
+                const result = await spotifyFetchWebApi('v1/me/top/tracks?limit=3', 'GET');
+                if (result && result.items) {
+                    status.innerHTML += '<span class="success">✓ Spotify работает!</span>\n';
+                    status.innerHTML += 'Найдено треков: ' + result.items.length + '\n\n';
+                    result.items.forEach(track => {
+                        status.innerHTML += '• ' + track.name + ' - ' + track.artists[0].name + '\n';
+                    });
+                } else {
+                    status.innerHTML += '<span class="error">✗ Неожиданный ответ Spotify</span>\n';
+                    status.innerHTML += JSON.stringify(result, null, 2);
+                }
+            } catch (e) {
+                status.innerHTML += '<span class="error">✗ Ошибка Spotify: ' + e.message + '</span>\n';
+            }
+        }
+
+        async function checkiTunes() {
+            const status = document.getElementById('apiStatus');
+            status.innerHTML = 'Проверка iTunes...\n';
+
+            try {
+                const result = await fetch('https://itunes.apple.com/search?term=music&limit=3');
+                const data = await result.json();
+                if (data.results && data.results.length > 0) {
+                    status.innerHTML += '<span class="success">✓ iTunes работает!</span>\n';
+                    status.innerHTML += 'Найдено треков: ' + data.results.length + '\n\n';
+                    data.results.slice(0, 3).forEach(track => {
+                        status.innerHTML += '• ' + track.trackName + ' - ' + track.artistName + '\n';
+                    });
+                } else {
+                    status.innerHTML += '<span class="error">✗ iTunes не вернул результаты</span>\n';
+                }
+            } catch (e) {
+                status.innerHTML += '<span class="error">✗ Ошибка iTunes: ' + e.message + '</span>\n';
+            }
+        }
+
+        async function testSearch() {
+            const query = document.getElementById('searchQuery').value;
+            const results = document.getElementById('searchResults');
+            results.innerHTML = 'Поиск "' + query + '"...\n';
+
+            try {
+                const data = await spotifyFetchWebApi(
+                    `v1/search?q=${encodeURIComponent(query)}&type=track&limit=5`,
+                    'GET'
+                );
+
+                if (data && data.tracks && data.tracks.items) {
+                    results.innerHTML += '<span class="success">✓ Найдено треков: ' + data.tracks.items.length + '</span>\n\n';
+                    data.tracks.items.forEach((track, i) => {
+                        results.innerHTML += (i + 1) + '. ' + track.name + '\n';
+                        results.innerHTML += '   Исполнитель: ' + track.artists[0].name + '\n';
+                        results.innerHTML += '   Preview: ' + (track.preview_url ? '✓' : '✗') + '\n\n';
+                    });
+                } else {
+                    results.innerHTML += '<span class="error">✗ Неожиданный ответ</span>\n';
+                }
+            } catch (e) {
+                results.innerHTML += '<span class="error">✗ Ошибка: ' + e.message + '</span>\n';
+            }
+        }
+
+        async function testLocalSearch() {
+            const query = document.getElementById('searchQuery').value;
+            const results = document.getElementById('searchResults');
+            results.innerHTML = 'Локальный поиск "' + query + '"...\n';
+
+            const mockAPI = new MusicAPI();
+            const localResults = await mockAPI.searchSongs(query);
+
+            results.innerHTML += '<span class="success">Найдено в локальной базе: ' + localResults.length + '</span>\n\n';
+            localResults.forEach((song, i) => {
+                results.innerHTML += (i + 1) + '. ' + song.title + '\n';
+                results.innerHTML += '   Исполнитель: ' + song.artist + '\n';
+                results.innerHTML += '   URL: ' + (song.url ? '✓' : '✗') + '\n\n';
+            });
+        }
+
+        async function testiTunesSearch() {
+            const query = document.getElementById('searchQuery').value;
+            const results = document.getElementById('searchResults');
+            results.innerHTML = 'iTunes поиск "' + query + '"...\n';
+
+            try {
+                const mockAPI = new MusicAPI();
+                const itunesResults = await mockAPI.searchWithItunes(query);
+
+                results.innerHTML += '<span class="success">Найдено в iTunes: ' + itunesResults.length + '</span>\n\n';
+                itunesResults.slice(0, 5).forEach((song, i) => {
+                    results.innerHTML += (i + 1) + '. ' + song.title + '\n';
+                    results.innerHTML += '   Исполнитель: ' + song.artist + '\n';
+                    results.innerHTML += '   Preview: ' + (song.url ? '✓' : '✗') + '\n\n';
+                });
+            } catch (e) {
+                results.innerHTML += '<span class="error">✗ Ошибка: ' + e.message + '</span>\n';
+            }
+        }
+
+        async function testAlbumSearch() {
+            const query = document.getElementById('albumQuery').value;
+            const results = document.getElementById('albumResults');
+            results.innerHTML = 'Поиск альбомов "' + query + '"...\n';
+
+            try {
+                const data = await spotifyFetchWebApi(
+                    `v1/search?q=${encodeURIComponent(query)}&type=album&limit=5`,
+                    'GET'
+                );
+
+                if (data && data.albums && data.albums.items) {
+                    results.innerHTML += '<span class="success">✓ Найдено альбомов: ' + data.albums.items.length + '</span>\n\n';
+                    data.albums.items.forEach((album, i) => {
+                        results.innerHTML += (i + 1) + '. ' + album.name + '\n';
+                        results.innerHTML += '   Исполнитель: ' + album.artists[0].name + '\n';
+                        results.innerHTML += '   Треков: ' + album.total_tracks + '\n';
+                        results.innerHTML += '   ID: ' + album.id + '\n\n';
+                    });
+                } else {
+                    results.innerHTML += '<span class="error">✗ Неожиданный ответ</span>\n';
+                }
+            } catch (e) {
+                results.innerHTML += '<span class="error">✗ Ошибка: ' + e.message + '</span>\n';
+            }
+        }
+
+        async function testAlbumDetails() {
+            const results = document.getElementById('albumResults');
+            results.innerHTML = 'Получение деталей альбома...\n';
+
+            try {
+                // Сначала ищем альбом
+                const query = document.getElementById('albumQuery').value;
+                const searchData = await spotifyFetchWebApi(
+                    `v1/search?q=${encodeURIComponent(query)}&type=album&limit=1`,
+                    'GET'
+                );
+
+                if (!searchData.albums.items[0]) {
+                    results.innerHTML += '<span class="error">✗ Альбом не найден</span>\n';
+                    return;
+                }
+
+                const albumId = searchData.albums.items[0].id;
+                const albumData = await spotifyFetchWebApi(`v1/albums/${albumId}/tracks?limit=5`, 'GET');
+
+                results.innerHTML += '<span class="success">✓ Загружены треки альбома</span>\n\n';
+                if (albumData && albumData.items) {
+                    results.innerHTML += 'Всего треков: ' + albumData.items.length + '\n\n';
+                    albumData.items.forEach((track, i) => {
+                        results.innerHTML += (i + 1) + '. ' + track.name + '\n';
+                        results.innerHTML += '   Длина: ' + (Math.floor(track.duration_ms / 1000)) + 'с\n';
+                        results.innerHTML += '   Preview: ' + (track.preview_url ? '✓' : '✗') + '\n\n';
+                    });
+                }
+            } catch (e) {
+                results.innerHTML += '<span class="error">✗ Ошибка: ' + e.message + '</span>\n';
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('consoleLogs').innerHTML = '';
+        }
+
+        // Выводим приветствие
+        console.log('=== Music Player Debug Console ===');
+        console.log('Версия: 1.0');
+        console.log('Загрузка API...');
+    </script>
+</body>
+</html>

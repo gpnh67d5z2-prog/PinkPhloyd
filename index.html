@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 PinkPhloyd - Музыкальный плеер</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23ff6b6b'/><circle cx='50' cy='50' r='40' fill='%231a1a2e'/><circle cx='50' cy='50' r='30' fill='%23ff6b6b'/><circle cx='50' cy='50' r='12' fill='%231a1a2e'/><circle cx='50' cy='50' r='8' fill='%23ff6b6b'/></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Боковая панель -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>🎵 PinkPhloyd</h1>
+            </div>
+            <div class="sidebar-search">
+                <input 
+                    type="text" 
+                    id="sidebarSearchInput" 
+                    class="sidebar-search-input" 
+                    placeholder="Поиск..."
+                >
+            </div>
+            <div class="sidebar-playlists">
+                <h3>Недавно прослушано</h3>
+                <div id="recentlyPlayed" class="recently-played-list"></div>
+            </div>
+        </aside>
+
+        <!-- Основной контент -->
+        <main class="main-content">
+            <!-- Плейлист песен -->
+            <section class="playlist-section" id="playlistSection">
+                <div id="playlist" class="playlist">
+                    <p class="loading">Начните поиск...</p>
+                </div>
+            </section>
+
+            <!-- Плеер внизу -->
+            <section class="player-bottom">
+                <!-- Плеер информация -->
+                <section class="now-playing">
+                    <div class="album-cover">
+                        <img id="albumCover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Crect fill='%23333' width='300' height='300'/%3E%3C/svg%3E" alt="Album Cover">
+                    </div>
+                    <div class="song-info">
+                        <h2 id="songTitle">Выберите песню</h2>
+                        <p id="artistName">Исполнитель</p>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div id="progress" class="progress"></div>
+                            </div>
+                            <span id="currentTime">0:00</span> / <span id="duration">0:00</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Контролы -->
+                <section class="controls">
+                    <button id="prevBtn" class="control-btn">
+                        <span class="icon-prev"></span>
+                    </button>
+                    <button id="playBtn" class="control-btn play-btn">
+                        <span class="icon-play"></span>
+                    </button>
+                    <button id="nextBtn" class="control-btn">
+                        <span class="icon-next"></span>
+                    </button>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <audio id="audioPlayer"></audio>
+    <script src="api.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
